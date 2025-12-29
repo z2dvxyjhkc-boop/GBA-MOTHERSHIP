@@ -78,12 +78,48 @@ import { Shield, Fingerprint, Coins, ArrowRightLeft, Radio, Menu, X, ExternalLin
           </button>
         </div>
         
-        {/* Menú Móvil */}
+  {/* Menú Móvil */}
         {isMenuOpen && (
-          <div className="md:hidden absolute top-16 left-0 w-full bg-black/95 backdrop-blur-2xl border-b border-white/10 p-6 flex flex-col gap-4 shadow-2xl">
-            <a href="#servicios" className="text-lg font-medium text-neutral-300">Servicios</a>
-            <a href="#gimg" className="text-lg font-medium text-neutral-300">Media</a>
-            <button className="bg-blue-600 text-white py-3 rounded-xl font-bold mt-2">Acceder a GBA ID</button>
+          <div className="md:hidden absolute top-16 left-0 w-full bg-black/95 backdrop-blur-2xl border-b border-white/10 p-6 flex flex-col gap-4 shadow-2xl z-50">
+            
+            <a 
+              href="#servicios" 
+              onClick={() => setIsMenuOpen(false)} 
+              className="text-lg font-medium text-neutral-300 hover:text-white"
+            >
+              Servicios
+            </a>
+            
+            <a 
+              href="#gimg" 
+              onClick={() => setIsMenuOpen(false)} 
+              className="text-lg font-medium text-neutral-300 hover:text-white"
+            >
+              Media
+            </a>
+            
+            {/* ✅ AQUÍ ESTÁ EL ARREGLO: Agregado el evento onClick */}
+            <button 
+              onClick={() => {
+                onOpenID();           // Abre el panel GBA ID
+                setIsMenuOpen(false); // Cierra el menú hamburguesa
+              }}
+              className="bg-blue-600 active:bg-blue-700 text-white py-3 rounded-xl font-bold mt-2 shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all"
+            >
+              Acceder a GBA ID
+            </button>
+
+            {/* Opcional: Botón extra para Login normal si lo quieres en móvil */}
+            <button 
+              onClick={() => {
+                onOpenLogin();
+                setIsMenuOpen(false);
+              }}
+              className="text-neutral-400 text-sm font-medium py-2"
+            >
+              ¿Ya tienes cuenta? Iniciar Sesión
+            </button>
+
           </div>
         )}
       </nav>
