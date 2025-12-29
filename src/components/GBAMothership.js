@@ -1,0 +1,282 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Shield, Fingerprint, Coins, ArrowRightLeft, Radio, Menu, X, ExternalLink, CheckCircle2, Globe, ArrowRight } from 'lucide-react';
+
+  const GBAMothership = ({ onOpenID, onOpenLogin }) => {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  // --- LOGO GBA PERSONALIZADO (Código CSS puro basado en tu imagen) ---
+  const GBALogo = () => (
+    <div className="grid grid-cols-2 gap-1 p-1 bg-white/5 rounded-md border border-white/10 backdrop-blur-sm shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+      {/* Top Left: Green */}
+      <div className="w-2.5 h-2.5 rounded-[2px] bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-sm" />
+      {/* Top Right: Blue */}
+      <div className="w-2.5 h-2.5 rounded-[2px] bg-gradient-to-br from-blue-400 to-blue-600 shadow-sm" />
+      {/* Bottom Left: Blue */}
+      <div className="w-2.5 h-2.5 rounded-[2px] bg-gradient-to-br from-blue-400 to-blue-600 shadow-sm" />
+      {/* Bottom Right: Green */}
+      <div className="w-2.5 h-2.5 rounded-[2px] bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-sm" />
+    </div>
+  );
+
+  // Animaciones
+  const fadeInUp = {
+    hidden: { opacity: 0, y: 30 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] } }
+  };
+
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.15 } }
+  };
+
+  return (
+    <div className="min-h-screen bg-black text-white font-sans selection:bg-blue-500/30 overflow-x-hidden relative">
+      
+      {/* --- LUCES DE FONDO --- */}
+      <div className="fixed top-0 left-1/4 w-[600px] h-[600px] bg-blue-900/10 rounded-full blur-[120px] -z-10 pointer-events-none" />
+      <div className="fixed bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-900/10 rounded-full blur-[120px] -z-10 pointer-events-none" />
+
+      {/* --- NAVBAR --- */}
+      <nav className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/70 backdrop-blur-xl transition-all">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          
+          {/* LOGO + NOMBRE COMPLETO */}
+          <div className="flex items-center gap-3 group cursor-default">
+             <GBALogo />
+             <span className="font-bold text-lg tracking-tight text-white/90 group-hover:text-white transition-colors">
+               GlobalBank <span className="text-white/50 font-normal">Alliance</span>
+             </span>
+          </div>
+
+          {/* ... dentro del div hidden md:flex ... */}
+
+<div className="hidden md:flex items-center gap-6">
+  <a href="#servicios" className="text-sm text-neutral-400 hover:text-white transition-colors">Servicios</a>
+  <a href="#gimg" className="text-sm text-neutral-400 hover:text-white transition-colors">Media</a>
+  
+  {/* Botón LOGIN (Texto simple) */}
+  <button 
+    onClick={onOpenLogin}
+    className="text-sm font-medium text-white hover:text-blue-400 transition-colors"
+  >
+    Entrar
+  </button>
+
+  {/* Botón REGISTER (Botón sólido) */}
+  <button 
+    onClick={onOpenID} 
+    className="bg-white text-black px-5 py-2 rounded-full text-xs font-bold hover:bg-neutral-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.15)]"
+  >
+    GBA ID
+  </button>
+
+          </div>
+
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden text-white">
+            {isMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+        
+        {/* Menú Móvil */}
+        {isMenuOpen && (
+          <div className="md:hidden absolute top-16 left-0 w-full bg-black/95 backdrop-blur-2xl border-b border-white/10 p-6 flex flex-col gap-4 shadow-2xl">
+            <a href="#servicios" className="text-lg font-medium text-neutral-300">Servicios</a>
+            <a href="#gimg" className="text-lg font-medium text-neutral-300">Media</a>
+            <button className="bg-blue-600 text-white py-3 rounded-xl font-bold mt-2">Acceder a GBA ID</button>
+          </div>
+        )}
+      </nav>
+
+      {/* --- HERO SECTION --- */}
+      <section className="pt-44 pb-20 px-6 text-center">
+        <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="max-w-4xl mx-auto">
+          
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 text-neutral-300 text-[10px] font-bold tracking-widest uppercase mb-8 backdrop-blur-md hover:bg-white/10 transition-colors cursor-default">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"/>
+            Ecosistema Financiero v2.0
+          </div>
+
+          <h1 className="text-5xl md:text-8xl font-bold tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-neutral-600">
+            El estándar global.
+          </h1>
+          
+          <p className="text-xl text-neutral-400 max-w-2xl mx-auto mb-12 font-light leading-relaxed">
+            Unificamos banca, seguridad militar y comercio internacional en una sola plataforma. 
+            Bienvenido a la economía centralizada de Empyria.
+          </p>
+        </motion.div>
+      </section>
+
+      {/* --- GRID DE SERVICIOS --- */}
+      <section id="servicios" className="px-4 pb-32">
+        <div className="max-w-6xl mx-auto">
+          <motion.div 
+            initial="hidden" 
+            whileInView="visible" 
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          >
+            
+            {/* 1. GBA ID - LA BASE */}
+            <motion.div variants={fadeInUp} className="md:col-span-2 relative group overflow-hidden rounded-[2.5rem] bg-neutral-900/40 border border-white/10 backdrop-blur-xl hover:border-blue-500/20 transition-all duration-500 min-h-[400px]">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              
+              <div className="relative z-10 p-10 h-full flex flex-col justify-between">
+                <div className="flex justify-between items-start">
+                  <div className="max-w-md">
+                    <h3 className="text-3xl font-bold mb-3 text-white">GBA ID</h3>
+                    <p className="text-neutral-400 text-sm md:text-base leading-relaxed">
+                      La cuenta universal. Tu pasaporte comercial y tu historial crediticio en un solo lugar. 
+                      Requisito indispensable para acceder a tasas preferenciales y servicios Premium.
+                    </p>
+                  </div>
+                  <Fingerprint className="text-blue-500" size={42} />
+                </div>
+
+                {/* Tarjeta Visual: Ciudadano Global */}
+                <div className="mt-8 self-start w-full md:w-auto">
+                  <div className="bg-gradient-to-r from-neutral-800/80 to-black/80 border border-white/10 rounded-2xl p-6 flex items-center gap-6 shadow-2xl backdrop-blur-md">
+                    <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-800 rounded-full flex items-center justify-center shadow-lg">
+                      <Globe className="text-white" size={24} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-neutral-500 tracking-widest uppercase mb-1">Membresía</div>
+                      <div className="text-xl font-bold text-white tracking-tight">Ciudadano Global</div>
+                    </div>
+                    <div className="ml-auto pl-6 border-l border-white/10">
+                       <CheckCircle2 className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]" size={24} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* 2. CARE+ (AEGIS) */}
+           <motion.div variants={fadeInUp} className="relative group overflow-hidden rounded-[2.5rem] bg-neutral-900/40 border border-white/10 backdrop-blur-xl hover:bg-neutral-800/40 transition-colors">
+  <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+  
+  <div className="relative z-10 p-8 h-full flex flex-col justify-between min-h-[350px]">
+    <div>
+       <div className="flex items-center gap-2 mb-4">
+         <Shield className="text-emerald-500" size={24} />
+         <span className="text-[10px] font-bold bg-emerald-950/30 text-emerald-400 px-2 py-1 rounded border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.1)]">POWERED BY AEGIS</span>
+       </div>
+       <h3 className="text-2xl font-bold mb-2">GBA Care+</h3>
+       <p className="text-neutral-400 text-sm leading-relaxed">
+         Sustitución inmediata de activos militares. Si tu tanque es destruido en combate, nosotros nos encargamos de la reposición.
+       </p>
+    </div>
+
+    {/* BOTÓN ACTIVADO: Lleva al Login */}
+    <button 
+      onClick={onOpenLogin}
+      className="w-full py-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500 text-emerald-400 hover:text-black text-sm font-bold transition-all shadow-[0_0_20px_rgba(16,185,129,0.05)] flex items-center justify-center gap-2 group/btn"
+    >
+       Consultar Cobertura 
+       <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" />
+    </button>
+  </div>
+</motion.div>
+
+            {/* 3. TRADE */}
+            <motion.div variants={fadeInUp} className="relative group overflow-hidden rounded-[2.5rem] bg-neutral-900/40 border border-white/10 backdrop-blur-xl min-h-[350px]">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[40px] rounded-full" />
+               <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-500/10 blur-[40px] rounded-full" />
+
+               <div className="relative z-10 p-8 h-full flex flex-col justify-center text-center">
+                 <div className="mx-auto w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-6 border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+                   <ArrowRightLeft className="text-neutral-300" size={20} />
+                 </div>
+                 <h3 className="text-2xl font-bold mb-3">GBA Trade</h3>
+                 <p className="text-neutral-400 text-sm mb-6">
+                   El puente neutral. Conectamos los mercados del bloque Capitalista y Socialista.
+                 </p>
+               </div>
+            </motion.div>
+
+            {/* 4. PAY LATER */}
+            <motion.div variants={fadeInUp} className="md:col-span-2 relative group overflow-hidden rounded-[2.5rem] bg-neutral-900/40 border border-white/10 backdrop-blur-xl hover:border-amber-500/20 transition-all duration-500">
+               <div className="absolute right-0 top-0 p-12 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <Coins size={150} />
+               </div>
+               
+               <div className="relative z-10 p-10 h-full flex flex-col md:flex-row items-center gap-8">
+                  <div className="flex-1">
+                     <h3 className="text-2xl font-bold mb-2 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.3)]">Pay Later</h3>
+                     <p className="text-neutral-400 text-sm md:text-base mb-6">
+                        Impulsa tu producción agrícola. Financiamos equipo esencial como regadoras y macetas. 
+                        Trabaja hoy, paga después.
+                     </p>
+                     <div className="flex items-center gap-2 text-xs font-bold tracking-widest text-amber-600 uppercase">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                        Microcréditos Disponibles
+                     </div>
+                  </div>
+                  
+                  {/* Ciclo de Pago Visual */}
+                  <div className="flex-1 w-full flex justify-center">
+                     <div className="flex gap-4">
+                        <div className="w-20 h-28 rounded-xl bg-neutral-800/50 border border-white/5 flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
+                           <div className="w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-[10px]">1</div>
+                           <span className="text-[10px] text-neutral-400">Solicita</span>
+                        </div>
+                        <div className="w-20 h-28 rounded-xl bg-neutral-800/50 border border-white/5 flex flex-col items-center justify-center gap-2 backdrop-blur-sm">
+                           <div className="w-6 h-6 rounded-full bg-neutral-700 flex items-center justify-center text-[10px]">2</div>
+                           <span className="text-[10px] text-neutral-400">Produce</span>
+                        </div>
+                        <div className="w-20 h-28 rounded-xl bg-amber-900/20 border border-amber-500/20 flex flex-col items-center justify-center gap-2 backdrop-blur-sm shadow-[0_0_15px_rgba(245,158,11,0.1)]">
+                           <div className="w-6 h-6 rounded-full bg-amber-600 text-black flex items-center justify-center text-[10px] font-bold">3</div>
+                           <span className="text-[10px] text-amber-400 font-bold">Paga</span>
+                        </div>
+                     </div>
+                  </div>
+               </div>
+            </motion.div>
+
+            
+            {/* 5. GIMG - VISTA */}
+<motion.div id="gimg" variants={fadeInUp} className="md:col-span-3 relative group overflow-hidden rounded-[2.5rem] bg-black border border-white/10">
+    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent z-10" />
+    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1588613254550-0624a317797e?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center opacity-30 group-hover:scale-105 transition-transform duration-1000" />
+    
+    <div className="relative z-20 p-10 flex flex-col md:flex-row items-end md:items-center justify-between gap-6">
+        <div>
+            <div className="flex items-center gap-2 mb-2 text-red-500">
+                <Radio size={16} className="animate-pulse" />
+                <span className="text-xs font-bold tracking-widest uppercase">Global Insight Media Group</span>
+            </div>
+            <h3 className="text-3xl md:text-4xl font-serif italic text-white mb-2">VISTA</h3>
+            <p className="text-neutral-400 max-w-lg">
+                Periodismo de guerra, documentales y entretenimiento. 
+            </p>
+        </div>
+        
+        {/* ✅ CAMBIO REALIZADO: Link externo seguro */}
+        <a 
+          href="https://gimg-vista.vercel.app/" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="px-8 py-3 rounded-full bg-white text-black font-bold hover:bg-neutral-200 transition-colors flex items-center gap-2 shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+        >
+            Explorar Contenido <ExternalLink size={16} />
+        </a>
+    </div>
+</motion.div>
+
+          </motion.div>
+        </div>
+      </section>
+
+      {/* --- FOOTER --- */}
+      <footer className="py-12 border-t border-white/5 text-center bg-black">
+        <p className="text-neutral-600 text-xs tracking-widest mb-2">
+          GBA GLOBALBANK ALLIANCE &copy; 2025
+        </p>
+      </footer>
+    </div>
+  );
+};
+
+export default GBAMothership;

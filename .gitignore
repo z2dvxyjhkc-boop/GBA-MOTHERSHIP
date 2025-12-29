@@ -1,0 +1,30 @@
+# Logs (Registros de errores que no sirven en la nube)
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencias (Esto pesa CIENTOS de megas, nunca se sube)
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files (Cosas de tu VS Code o Mac/Windows)
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs
+*.njsproj
+*.sln
+*.sw?
+
+# Claves secretas (SUPER IMPORTANTE - ESTO PROTEGE TUS CLAVES)
+.env
+.env.local
+.env.*.local
