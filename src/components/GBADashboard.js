@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { LogOut, Wallet, Shield, History, Bell, ChevronRight, User, RefreshCw, ShieldAlert } from 'lucide-react';
+import { LogOut, Wallet, Shield, History, Bell, ChevronRight, User, RefreshCw, ShieldAlert, QrCode, Store } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import GBAAdminDeposit from './GBAAdminDeposit'; 
 import GBATransfer from './GBATransfer'; 
 import GBACare from './GBACare'; 
 import GBAHistory from './GBAHistory';
 import GBAAvisos from './GBAAvisos';
-import GBAAdminPanel from './GBAAdminPanel'; // <--- 1. Importamos el Panel de Admin
+import GBAAdminPanel from './GBAAdminPanel';
+import GBAMerchantPOS from './GBAMerchantPOS';
+import GBASupervisorAuth from './GBASupervisorAuth'; 
+import GBAPayTicket from './GBAPayTicket'; // <--- 1. IMPORTAR TICKET VISUAL
 
 const GBADashboard = ({ user, onLogout }) => {
   const [saldo, setSaldo] = useState(0);
@@ -19,7 +22,10 @@ const GBADashboard = ({ user, onLogout }) => {
   const [showCare, setShowCare] = useState(false); 
   const [showHistory, setShowHistory] = useState(false);
   const [showAvisos, setShowAvisos] = useState(false);
-  const [showAdminPanel, setShowAdminPanel] = useState(false); // <--- 2. Estado para el Panel
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showPOS, setShowPOS] = useState(false);
+  const [showSupervisorAuth, setShowSupervisorAuth] = useState(false);
+  const [ticketData, setTicketData] = useState(null); // <--- 2. NUEVO ESTADO PARA EL TICKET
 
   // Animaciones
   const containerVariants = {
@@ -32,7 +38,6 @@ const GBADashboard = ({ user, onLogout }) => {
     visible: { y: 0, opacity: 1 }
   };
 
-  // --- FUNCIÓN PARA OBTENER SALDO REAL ---
   const fetchSaldo = async () => {
     if (!user || !user.nombre) return;
     setLoadingSaldo(true);
@@ -61,6 +66,36 @@ const GBADashboard = ({ user, onLogout }) => {
     fetchSaldo();
   }, [user]);
 
+  // --- 3. ACTUALIZADO: LOGICA PARA MOSTRAR TICKET VISUAL ---
+  const handleGenerateToken = async () => {
+    // Quitamos el confirm() para hacerlo más rápido y fluido
+    try {
+      const token = Math.floor(1000 + Math.random() * 9000).toString();
+      
+      const { error } = await supabase
+        .from('usuarios')
+        .update({ token_pago: token })
+        .eq('nombre', user.nombre);
+
+      if (error) throw error;
+      
+      // Guardamos el token en el estado para abrir el modal visual
+      setTicketData(token); 
+
+    } catch (error) {
+      alert("Error generando el token: " + error.message);
+    }
+  };
+  // ---------------------------------------------------------
+
+  const handleTransferClick = () => {
+    if (user?.rol === 'comercio') {
+      setShowSupervisorAuth(true);
+    } else {
+      setShowTransfer(true);
+    }
+  };
+
   const formatMoney = (amount) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
   };
@@ -87,7 +122,6 @@ const GBADashboard = ({ user, onLogout }) => {
             <h1 className="text-3xl font-bold tracking-tight mb-1 flex items-center gap-4">
               Hola, {user?.nombre || 'Ciudadano'}
               
-              {/* BOTÓN EXCLUSIVO PARA EL DUEÑO */}
               {user?.rol === 'Dueño' && (
                 <button 
                   onClick={() => setShowAdminPanel(true)}
@@ -131,6 +165,7 @@ const GBADashboard = ({ user, onLogout }) => {
                       <span className="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/20 text-[10px] font-bold text-emerald-400">VERIFICADO</span>
                       <span className="text-[10px] text-neutral-500">{user?.nacion || 'Global'}</span>
                       {(user?.rol === 'admin' || user?.rol === 'Dueño') && <span className="text-[10px] text-yellow-500 font-bold border border-yellow-500/30 px-1 rounded uppercase">{user?.rol}</span>}
+                      {user?.rol === 'comercio' && <span className="text-[10px] text-blue-400 font-bold border border-blue-400/30 px-1 rounded uppercase">COMERCIO</span>}
                    </div>
                  </div>
                </div>
@@ -190,11 +225,28 @@ const GBADashboard = ({ user, onLogout }) => {
                   )}
 
                   <button 
-                    onClick={() => setShowTransfer(true)}
+                    onClick={handleTransferClick}
                     className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm hover:bg-white/10 transition-colors"
                   >
                      Enviar
                   </button>
+
+                  {user?.rol === 'comercio' ? (
+                     <button 
+                        onClick={() => setShowPOS(true)}
+                        className="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 transition-colors shadow-[0_0_15px_rgba(37,99,235,0.4)] flex items-center gap-2"
+                     >
+                        <Store size={16} /> Cobrar
+                     </button>
+                  ) : (
+                     <button 
+                        onClick={handleGenerateToken}
+                        className="px-6 py-3 rounded-xl bg-blue-500/10 border border-blue-500/50 text-blue-400 font-bold text-sm hover:bg-blue-500/20 transition-colors flex items-center gap-2"
+                        title="Generar código de compra"
+                     >
+                        <QrCode size={16} /> GBA Pay
+                     </button>
+                  )}
                </div>
             </motion.div>
 
@@ -238,30 +290,26 @@ const GBADashboard = ({ user, onLogout }) => {
                </motion.button>
             </div>
             
-           {/* VISTA Breaking News - Link Directo */}
-<motion.a 
-  href="https://gimg-vista.vercel.app/"
-  target="_blank" 
-  rel="noopener noreferrer"
-  variants={itemVariants} 
-  className="p-6 rounded-3xl bg-black border border-white/10 relative overflow-hidden group cursor-pointer block"
->
-    {/* Imagen de Fondo */}
-    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-30 group-hover:opacity-40 transition-opacity" />
-    <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
-    
-    {/* Contenido */}
-    <div className="relative z-10 flex justify-between items-center">
-        <div>
-            <span className="text-[10px] font-bold text-red-500 tracking-widest uppercase mb-1 block">Ultima Hora</span>
-            <h3 className="text-xl font-serif italic text-white">VISTA Breaking News</h3>
-            <p className="text-xs text-neutral-400 mt-1">Accede con tu cuenta GBA</p>
-        </div>
-        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md group-hover:bg-white/20 transition-colors">
-            <ChevronRight size={16} />
-        </div>
-    </div>
-</motion.a>
+            <motion.a 
+              href="https://gimg-vista.vercel.app/"
+              target="_blank" 
+              rel="noopener noreferrer"
+              variants={itemVariants} 
+              className="p-6 rounded-3xl bg-black border border-white/10 relative overflow-hidden group cursor-pointer block"
+            >
+               <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1495020689067-958852a7765e?auto=format&fit=crop&q=80')] bg-cover bg-center opacity-30 group-hover:opacity-40 transition-opacity" />
+               <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
+               <div className="relative z-10 flex justify-between items-center">
+                   <div>
+                       <span className="text-[10px] font-bold text-red-500 tracking-widest uppercase mb-1 block">Ultima Hora</span>
+                       <h3 className="text-xl font-serif italic text-white">VISTA Breaking News</h3>
+                       <p className="text-xs text-neutral-400 mt-1">Accede con tu cuenta GBA</p>
+                   </div>
+                   <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md group-hover:bg-white/20 transition-colors">
+                       <ChevronRight size={16} />
+                   </div>
+               </div>
+            </motion.a>
 
           </div>
         </div>
@@ -305,10 +353,34 @@ const GBADashboard = ({ user, onLogout }) => {
         />
       )}
 
-      {/* MODAL DE ADMIN PANEL (DUEÑO) */}
       {showAdminPanel && (
         <GBAAdminPanel 
           onClose={() => setShowAdminPanel(false)} 
+        />
+      )}
+
+      {showPOS && (
+        <GBAMerchantPOS
+          onClose={() => setShowPOS(false)}
+          onSuccess={() => fetchSaldo()}
+        />
+      )}
+
+      {showSupervisorAuth && (
+        <GBASupervisorAuth
+          onClose={() => setShowSupervisorAuth(false)}
+          onAuthorized={() => {
+            setShowSupervisorAuth(false);
+            setShowTransfer(true);
+          }}
+        />
+      )}
+
+      {/* 6. MODAL VISUAL DEL TICKET GBA PAY */}
+      {ticketData && (
+        <GBAPayTicket 
+          token={ticketData} 
+          onClose={() => setTicketData(null)} 
         />
       )}
 

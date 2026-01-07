@@ -160,9 +160,18 @@ const GBAAdminPanel = ({ onClose }) => {
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-1">
                             <span className="text-lg font-bold text-white">{u.nombre}</span>
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${u.rol === 'Dueño' ? 'bg-red-500 text-white' : u.rol === 'admin' ? 'bg-blue-500 text-white' : 'bg-neutral-700 text-neutral-300'}`}>
+                            
+                            {/* --- ACTUALIZADO: Badge de Rol (Incluye Comercio) --- */}
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase ${
+                                u.rol === 'Dueño' ? 'bg-red-500 text-white' : 
+                                u.rol === 'admin' ? 'bg-blue-500 text-white' : 
+                                u.rol === 'comercio' ? 'bg-purple-600 text-white' : // <--- Color para Comercio
+                                'bg-neutral-700 text-neutral-300'
+                            }`}>
                               {u.rol}
                             </span>
+                            {/* --------------------------------------------------- */}
+
                           </div>
                           <div className="text-[10px] text-neutral-500 uppercase tracking-widest font-bold">Care+: {u.care_status === 'activo' ? u.care_level : 'Inactivo'}</div>
                         </div>
@@ -187,6 +196,9 @@ const GBAAdminPanel = ({ onClose }) => {
                             className="bg-transparent text-xs font-bold text-white outline-none pr-4 cursor-pointer"
                           >
                             <option value="usuario">Ciudadano</option>
+                            {/* --- NUEVA OPCIÓN: COMERCIO --- */}
+                            <option value="comercio">Comercio (POS)</option>
+                            {/* ----------------------------- */}
                             <option value="admin">Administrador</option>
                             <option value="Dueño">Dueño</option>
                           </select>
