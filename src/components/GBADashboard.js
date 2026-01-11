@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { LogOut, Wallet, Shield, History, Bell, ChevronRight, User, RefreshCw, ShieldAlert, QrCode, Store } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { LogOut, Wallet, Shield, History, Bell, ChevronRight, User, RefreshCw, ShieldAlert, QrCode, Store, CreditCard, ArrowRightLeft } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import GBAAdminDeposit from './GBAAdminDeposit'; 
 import GBATransfer from './GBATransfer'; 
@@ -10,10 +10,14 @@ import GBAAvisos from './GBAAvisos';
 import GBAAdminPanel from './GBAAdminPanel';
 import GBAMerchantPOS from './GBAMerchantPOS';
 import GBASupervisorAuth from './GBASupervisorAuth'; 
-import GBAPayTicket from './GBAPayTicket'; // <--- 1. IMPORTAR TICKET VISUAL
+import GBAPayTicket from './GBAPayTicket'; 
 
 const GBADashboard = ({ user, onLogout }) => {
   const [saldo, setSaldo] = useState(0);
+  // --- NUEVOS ESTADOS DE CRÉDITO ---
+  const [creditoUsado, setCreditoUsado] = useState(0);
+  const [creditoLimite, setCreditoLimite] = useState(0);
+  const [activeCard, setActiveCard] = useState('debit'); // 'debit' o 'credit'
   const [loadingSaldo, setLoadingSaldo] = useState(true);
   
   // ESTADOS PARA LOS MODALES
@@ -25,7 +29,7 @@ const GBADashboard = ({ user, onLogout }) => {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showPOS, setShowPOS] = useState(false);
   const [showSupervisorAuth, setShowSupervisorAuth] = useState(false);
-  const [ticketData, setTicketData] = useState(null); // <--- 2. NUEVO ESTADO PARA EL TICKET
+  const [ticketData, setTicketData] = useState(null);
 
   // Animaciones
   const containerVariants = {
@@ -53,6 +57,9 @@ const GBADashboard = ({ user, onLogout }) => {
       
       if (data) {
         setSaldo(data.saldo || 0);
+        // --- CARGAR DATOS DE CRÉDITO ---
+        setCreditoUsado(data.credito_usado || 0);
+        setCreditoLimite(data.credito_limite || 0);
         Object.assign(user, data); 
       }
     } catch (err) {
@@ -66,27 +73,60 @@ const GBADashboard = ({ user, onLogout }) => {
     fetchSaldo();
   }, [user]);
 
-  // --- 3. ACTUALIZADO: LOGICA PARA MOSTRAR TICKET VISUAL ---
+  // --- LÓGICA DE PAGO DE TARJETA ---
+  const handlePayCredit = async () => {
+    if (creditoUsado <= 0) return;
+    if (saldo < creditoUsado) {
+      alert("No tienes suficiente saldo en débito para pagar toda la deuda.");
+      return;
+    }
+
+    const confirmPayment = window.confirm(`¿Deseas pagar tu deuda de $${creditoUsado} usando tu saldo disponible?`);
+    if (!confirmPayment) return;
+
+    try {
+      const newSaldo = saldo - creditoUsado;
+      
+      const { error } = await supabase
+        .from('usuarios')
+        .update({ 
+          saldo: newSaldo,
+          credito_usado: 0 
+        })
+        .eq('nombre', user.nombre);
+
+      if (error) throw error;
+
+      alert("¡Deuda pagada exitosamente! Tu línea de crédito está restaurada.");
+      fetchSaldo(); 
+
+    } catch (error) {
+      console.error(error);
+      alert("Error al procesar el pago.");
+    }
+  };
+
+  // --- ACTUALIZADO: AHORA GUARDA QUÉ TARJETA SE ESTÁ USANDO (token_modo) ---
   const handleGenerateToken = async () => {
-    // Quitamos el confirm() para hacerlo más rápido y fluido
     try {
       const token = Math.floor(1000 + Math.random() * 9000).toString();
       
       const { error } = await supabase
         .from('usuarios')
-        .update({ token_pago: token })
+        .update({ 
+            token_pago: token,
+            token_modo: activeCard // <--- ESTA ES LA CLAVE: 'debit' o 'credit'
+        })
         .eq('nombre', user.nombre);
 
       if (error) throw error;
-      
-      // Guardamos el token en el estado para abrir el modal visual
       setTicketData(token); 
 
     } catch (error) {
       alert("Error generando el token: " + error.message);
     }
   };
-  // ---------------------------------------------------------
+  // -------------------------------------------------------------------------
 
   const handleTransferClick = () => {
     if (user?.rol === 'comercio') {
@@ -98,6 +138,20 @@ const GBADashboard = ({ user, onLogout }) => {
 
   const formatMoney = (amount) => {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+  };
+
+  // --- OBTENER ESTILO DE TARJETA SEGÚN NIVEL ---
+  const getCardStyle = () => {
+    if (activeCard === 'debit') {
+      return "bg-gradient-to-br from-neutral-800 to-black border-white/10";
+    }
+    // Estilos para Crédito según Care+
+    const level = user?.care_level || '';
+    if (level === 'Aegis Prime') return "bg-gradient-to-br from-neutral-950 via-black to-neutral-900 border-yellow-500/50 shadow-[0_0_20px_rgba(234,179,8,0.2)]"; 
+    if (level === 'Tactical Shield') return "bg-gradient-to-br from-yellow-900 via-yellow-800 to-black border-yellow-400/30"; 
+    if (level === 'Eco Guard') return "bg-gradient-to-br from-slate-600 to-slate-800 border-slate-400/30"; 
+    
+    return "bg-gradient-to-br from-neutral-800 to-neutral-900 border-white/10";
   };
 
   return (
@@ -144,21 +198,36 @@ const GBADashboard = ({ user, onLogout }) => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           
           <motion.div variants={itemVariants} className="md:col-span-1">
-            <div className="relative w-full aspect-[1.58/1] bg-gradient-to-br from-neutral-800 to-black rounded-3xl border border-white/10 overflow-hidden shadow-2xl group cursor-default">
+            
+            {/* --- TARJETA DINÁMICA --- */}
+            <div className={`relative w-full aspect-[1.58/1] rounded-3xl border overflow-hidden shadow-2xl transition-all duration-500 ${getCardStyle()}`}>
                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20 mix-blend-overlay" />
-               <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/30 blur-[60px] rounded-full" />
+               {activeCard === 'debit' ? (
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/30 blur-[60px] rounded-full" />
+               ) : (
+                  <div className="absolute top-0 right-0 w-40 h-40 bg-yellow-500/20 blur-[60px] rounded-full" />
+               )}
                
                <div className="relative z-10 p-6 h-full flex flex-col justify-between">
                  <div className="flex justify-between items-start">
                    <div className="grid grid-cols-2 gap-0.5 w-6 h-6">
-                      <div className="bg-emerald-500 rounded-[1px]" />
-                      <div className="bg-blue-500 rounded-[1px]" />
-                      <div className="bg-blue-500 rounded-[1px]" />
-                      <div className="bg-emerald-500 rounded-[1px]" />
+                      <div className={`rounded-[1px] ${activeCard === 'credit' ? 'bg-yellow-400' : 'bg-emerald-500'}`} />
+                      <div className={`rounded-[1px] ${activeCard === 'credit' ? 'bg-yellow-600' : 'bg-blue-500'}`} />
+                      <div className={`rounded-[1px] ${activeCard === 'credit' ? 'bg-yellow-600' : 'bg-blue-500'}`} />
+                      <div className={`rounded-[1px] ${activeCard === 'credit' ? 'bg-yellow-400' : 'bg-emerald-500'}`} />
                    </div>
-                   <span className="font-mono text-[10px] text-white/50 tracking-widest">GBA OFFICIAL ID</span>
+                   
+                   <div className="flex flex-col items-end">
+                      <span className="font-mono text-[10px] text-white/50 tracking-widest uppercase">
+                        {activeCard === 'debit' ? 'GBA OFFICIAL ID' : 'GBA CREDIT'}
+                      </span>
+                      {activeCard === 'credit' && (
+                        <span className="text-[10px] text-yellow-500 font-bold uppercase tracking-wider">{user?.care_level || 'STANDARD'}</span>
+                      )}
+                   </div>
                  </div>
                  
+                 {/* --- INFORMACION DEL USUARIO (PRESERVADA) --- */}
                  <div>
                    <div className="text-lg font-bold text-white tracking-wide">{user?.nombre || 'USUARIO'}</div>
                    <div className="flex items-center gap-2 mt-1">
@@ -170,6 +239,24 @@ const GBADashboard = ({ user, onLogout }) => {
                  </div>
                </div>
             </div>
+
+            {/* --- SWITCHER DE TARJETAS --- */}
+            {creditoLimite > 0 && (
+              <div className="mt-4 flex bg-neutral-900/50 p-1 rounded-xl border border-white/5">
+                <button 
+                  onClick={() => setActiveCard('debit')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeCard === 'debit' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                >
+                  <Wallet size={14} /> Débito
+                </button>
+                <button 
+                  onClick={() => setActiveCard('credit')}
+                  className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${activeCard === 'credit' ? 'bg-neutral-800 text-white shadow-lg' : 'text-neutral-500 hover:text-white'}`}
+                >
+                  <CreditCard size={14} /> Crédito
+                </button>
+              </div>
+            )}
 
             <div className="mt-6 p-6 rounded-3xl bg-neutral-900/50 border border-white/5 backdrop-blur-md">
                <div className="flex items-center gap-3 mb-4">
@@ -191,61 +278,103 @@ const GBADashboard = ({ user, onLogout }) => {
 
           <div className="md:col-span-2 space-y-6">
             
-            <motion.div variants={itemVariants} className="p-8 rounded-[2.5rem] bg-neutral-900/30 border border-white/10 backdrop-blur-md flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
-               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500" />
+            <motion.div variants={itemVariants} className="p-8 rounded-[2.5rem] bg-neutral-900/30 border border-white/10 backdrop-blur-md flex flex-col justify-between gap-6 relative overflow-hidden">
+               {activeCard === 'debit' ? (
+                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-blue-500 to-purple-500" />
+               ) : (
+                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-yellow-600 via-yellow-400 to-yellow-200" />
+               )}
                
-               <div>
-                  <div className="flex items-center gap-2 text-neutral-400 mb-2">
-                     <Wallet size={16} />
-                     <span className="text-xs font-bold tracking-widest uppercase">Saldo Disponible</span>
-                     <button onClick={fetchSaldo} className="ml-2 hover:bg-white/10 p-1 rounded-full transition-colors" title="Actualizar saldo">
-                        <RefreshCw size={12} className={loadingSaldo ? "animate-spin" : ""} />
-                     </button>
+               <div className="w-full">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 text-neutral-400">
+                      {activeCard === 'debit' ? <Wallet size={16} /> : <CreditCard size={16} />}
+                      <span className="text-xs font-bold tracking-widest uppercase">
+                        {activeCard === 'debit' ? 'Saldo Disponible' : 'Crédito Disponible'}
+                      </span>
+                    </div>
+                    <button onClick={fetchSaldo} className="hover:bg-white/10 p-1 rounded-full transition-colors" title="Actualizar">
+                         <RefreshCw size={12} className={loadingSaldo ? "animate-spin" : ""} />
+                    </button>
                   </div>
                   
-                  <div className="text-5xl font-bold text-white tracking-tighter">
-                    {loadingSaldo ? "..." : formatMoney(saldo)}
+                  <div className="flex items-baseline gap-2">
+                    <div className={`text-5xl font-bold tracking-tighter ${activeCard === 'credit' ? 'text-yellow-100' : 'text-white'}`}>
+                      {loadingSaldo 
+                        ? "..." 
+                        : activeCard === 'debit' 
+                          ? formatMoney(saldo) 
+                          : formatMoney(creditoLimite - creditoUsado)
+                      }
+                    </div>
+                    {activeCard === 'credit' && <span className="text-sm text-neutral-500">de {formatMoney(creditoLimite)}</span>}
                   </div>
                   
-                  <p className="text-xs text-neutral-500 mt-2">Moneda segura respaldada por GBA.</p>
+                  {activeCard === 'debit' ? (
+                    <p className="text-xs text-neutral-500 mt-2">Moneda segura respaldada por GBA.</p>
+                  ) : (
+                     <div className="mt-2 flex items-center gap-4">
+                        <p className="text-xs text-red-400">Deuda actual: {formatMoney(creditoUsado)}</p>
+                        {/* BARRA DE PROGRESO DEUDA */}
+                        <div className="h-1.5 w-24 bg-neutral-800 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-red-500" 
+                            style={{ width: `${Math.min((creditoUsado / creditoLimite) * 100, 100)}%` }} 
+                          />
+                        </div>
+                     </div>
+                  )}
                </div>
 
-               <div className="flex gap-3">
-                  {(user?.rol === 'admin' || user?.rol === 'Dueño') ? (
+               {/* --- BOTONES EN HORIZONTAL (CAMBIO CLAVE) --- */}
+               <div className="flex flex-row flex-wrap gap-3 mt-2">
+                  
+                  {activeCard === 'credit' && creditoUsado > 0 ? (
                     <button 
-                      onClick={() => setShowAdminDeposit(true)}
-                      className="px-6 py-3 rounded-xl bg-emerald-500 text-black font-bold text-sm hover:bg-emerald-400 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center gap-2"
+                      onClick={handlePayCredit}
+                      className="px-6 py-3 rounded-xl bg-white text-black font-bold text-sm hover:bg-neutral-200 transition-colors shadow-[0_0_15px_rgba(255,255,255,0.2)] flex items-center justify-center gap-2"
                     >
-                       <Shield size={16}/> Panel Cajero
+                       <ArrowRightLeft size={16} /> Pagar Tarjeta
                     </button>
                   ) : (
-                    <button className="px-6 py-3 rounded-xl bg-white/5 text-neutral-500 font-bold text-sm border border-white/5 cursor-not-allowed">
-                       Ingresar
-                    </button>
-                  )}
+                    <>
+                      {(user?.rol === 'admin' || user?.rol === 'Dueño') ? (
+                        <button 
+                          onClick={() => setShowAdminDeposit(true)}
+                          className="px-6 py-3 rounded-xl bg-emerald-500 text-black font-bold text-sm hover:bg-emerald-400 transition-colors shadow-[0_0_15px_rgba(16,185,129,0.3)] flex items-center justify-center gap-2"
+                        >
+                            <Shield size={16}/> Panel Cajero
+                        </button>
+                      ) : (
+                        <button className="px-6 py-3 rounded-xl bg-white/5 text-neutral-500 font-bold text-sm border border-white/5 cursor-not-allowed">
+                            Ingresar
+                        </button>
+                      )}
 
-                  <button 
-                    onClick={handleTransferClick}
-                    className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm hover:bg-white/10 transition-colors"
-                  >
-                     Enviar
-                  </button>
+                      <button 
+                        onClick={handleTransferClick}
+                        className="px-6 py-3 rounded-xl bg-white/5 border border-white/10 text-white font-bold text-sm hover:bg-white/10 transition-colors"
+                      >
+                          Enviar
+                      </button>
 
-                  {user?.rol === 'comercio' ? (
-                     <button 
-                        onClick={() => setShowPOS(true)}
-                        className="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 transition-colors shadow-[0_0_15px_rgba(37,99,235,0.4)] flex items-center gap-2"
-                     >
-                        <Store size={16} /> Cobrar
-                     </button>
-                  ) : (
-                     <button 
-                        onClick={handleGenerateToken}
-                        className="px-6 py-3 rounded-xl bg-blue-500/10 border border-blue-500/50 text-blue-400 font-bold text-sm hover:bg-blue-500/20 transition-colors flex items-center gap-2"
-                        title="Generar código de compra"
-                     >
-                        <QrCode size={16} /> GBA Pay
-                     </button>
+                      {user?.rol === 'comercio' ? (
+                          <button 
+                            onClick={() => setShowPOS(true)}
+                            className="px-6 py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-500 transition-colors shadow-[0_0_15px_rgba(37,99,235,0.4)] flex items-center justify-center gap-2"
+                          >
+                            <Store size={16} /> Cobrar
+                          </button>
+                      ) : (
+                          <button 
+                            onClick={handleGenerateToken}
+                            className="px-6 py-3 rounded-xl bg-blue-500/10 border border-blue-500/50 text-blue-400 font-bold text-sm hover:bg-blue-500/20 transition-colors flex items-center justify-center gap-2"
+                            title="Generar código de compra"
+                          >
+                            <QrCode size={16} /> GBA Pay
+                          </button>
+                      )}
+                    </>
                   )}
                </div>
             </motion.div>
@@ -360,11 +489,12 @@ const GBADashboard = ({ user, onLogout }) => {
       )}
 
       {showPOS && (
-        <GBAMerchantPOS
-          onClose={() => setShowPOS(false)}
-          onSuccess={() => fetchSaldo()}
-        />
-      )}
+  <GBAMerchantPOS
+    currentUser={user} // <--- ¡ESTO ES VITAL! Pasamos tus datos al POS
+    onClose={() => setShowPOS(false)}
+    onSuccess={() => fetchSaldo()}
+  />
+)}
 
       {showSupervisorAuth && (
         <GBASupervisorAuth
