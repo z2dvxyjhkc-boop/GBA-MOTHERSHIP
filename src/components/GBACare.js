@@ -5,35 +5,39 @@ import { supabase } from '../supabaseClient';
 
 // --- CONFIGURACIÓN ---
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1454921751300669576/0D76QmjUjFVSIxOHCGxRqu_Zcjw1I4MY-HEtt-ylN1BBOuxNSH7NZ5DEZLdFhnO82jCa"; 
-const TREASURY_ACCOUNT = "Aegis_Corp"; // <--- LA CUENTA QUE RECIBE EL DINERO
+const TREASURY_ACCOUNT = "Aegis_Corp"; 
 
+// --- NUEVOS PRECIOS Y LÍMITES ---
 const PLANS = [
   {
     id: 'tier1',
     name: 'Eco Guard',
     tagline: 'Protección esencial para civiles.',
-    price: 2500,
-    creditLimit: 1500,
+    price: 1, // $1.00
+    period: 'cada 2 días',
+    creditLimit: 75, // Crédito $75
     icon: <Box size={32} className="text-blue-500" />,
-    features: ['Recuperación de inventario', 'Remolque de vehículos civiles', 'Soporte técnico GBA', 'Línea de Crédito: $1,500']
+    features: ['Recuperación de inventario', 'Remolque de vehículos civiles', 'Soporte técnico GBA', 'Línea de Crédito: $75']
   },
   {
     id: 'tier2',
     name: 'Tactical Shield',
     tagline: 'Para operaciones de campo activas.',
-    price: 7500,
-    creditLimit: 5000,
+    price: 3.50, // $3.50
+    period: 'cada 2 días',
+    creditLimit: 250, // Crédito $250
     icon: <Target size={32} className="text-emerald-500" />,
-    features: ['Sustitución de blindados ligeros', 'Seguro de armamento táctico', 'Suministros médicos urgentes', 'Línea de Crédito: $5,000']
+    features: ['Sustitución de blindados ligeros', 'Seguro de armamento táctico', 'Suministros médicos urgentes', 'Línea de Crédito: $250']
   },
   {
     id: 'tier3',
     name: 'Aegis Prime',
     tagline: 'La tranquilidad de la fuerza total.',
-    price: 20000,
-    creditLimit: 15000,
+    price: 10, // $10.00
+    period: 'cada 2 días',
+    creditLimit: 650, // Crédito $650
     icon: <Shield size={32} className="text-amber-500" />,
-    features: ['Sustitución inmediata de Tanques', 'Apoyo aéreo de rescate', 'Cobertura total de base', 'Línea de Crédito: $15,000']
+    features: ['Sustitución inmediata de Tanques', 'Apoyo aéreo de rescate', 'Cobertura total de base', 'Línea de Crédito: $650']
   }
 ];
 
@@ -60,7 +64,7 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
       fields: [
         { name: "Usuario", value: currentUser.nombre, inline: true },
         { name: "Nivel / Plan", value: isPurchase ? data.planName : "Cancelado", inline: true },
-        { name: "Monto", value: isPurchase ? `$${data.price}` : "$0", inline: true },
+        { name: "Monto Inicial", value: isPurchase ? `$${data.price}` : "$0", inline: true },
         ...(isPurchase ? [
           { name: "Crédito Aprobado", value: `$${data.creditLimit}`, inline: false }
         ] : [
@@ -82,7 +86,7 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
     }
   };
 
-  // --- LÓGICA DE COMPRA (CON DEPÓSITO A TESORERÍA) ---
+  // --- LÓGICA DE COMPRA ---
   const confirmPurchase = async () => {
     if (currentUser.saldo < selectedPlan.price) {
       alert('Fondos insuficientes');
@@ -91,7 +95,7 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
 
     setIsProcessing(true);
     try {
-      // 1. OBTENER SALDO DE LA TESORERÍA (AEGIS CORP)
+      // 1. OBTENER SALDO DE LA TESORERÍA
       const { data: treasuryData, error: treasuryError } = await supabase
         .from('usuarios')
         .select('saldo')
@@ -101,13 +105,14 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
       if (treasuryError) {
         console.error("Error buscando cuenta tesorería:", treasuryError);
         alert(`Error crítico: No se encuentra la cuenta ${TREASURY_ACCOUNT}. Contacta al admin.`);
-        return; // Detenemos todo si no existe la cuenta destino
+        return; 
       }
 
+      // IMPORTANTE: Aquí definimos que el primer cobro cubre los primeros 2 días
       const expireDate = new Date();
-      expireDate.setDate(expireDate.getDate() + 7);
+      expireDate.setDate(expireDate.getDate() + 2); // Expiración en 2 días
 
-      // 2. ACTUALIZAR AL USUARIO (RESTA) Y ACTIVAR TARJETA
+      // 2. ACTUALIZAR AL USUARIO
       const { error: userError } = await supabase
         .from('usuarios')
         .update({
@@ -122,7 +127,7 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
 
       if (userError) throw userError;
 
-      // 3. ACTUALIZAR TESORERÍA (SUMA) - ¡AQUÍ ESTÁ EL DINERO!
+      // 3. ACTUALIZAR TESORERÍA
       const { error: depositError } = await supabase
         .from('usuarios')
         .update({
@@ -130,15 +135,15 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
         })
         .eq('nombre', TREASURY_ACCOUNT);
 
-      if (depositError) console.error("Error depositando a tesorería (dinero en limbo):", depositError);
+      if (depositError) console.error("Error depositando a tesorería:", depositError);
 
-      // 4. LOGS E HISTORIAL
+      // 4. LOGS
       await supabase.from('transacciones').insert([{
         emisor: currentUser.nombre,
-        receptor: TREASURY_ACCOUNT, // Ahora el receptor es Aegis
+        receptor: TREASURY_ACCOUNT,
         monto: selectedPlan.price,
         tipo: 'CARE+',
-        detalles: `Suscripción: ${selectedPlan.name}`
+        detalles: `Suscripción (2 días): ${selectedPlan.name}`
       }]);
       
       sendDiscordLog('COMPRA', {
@@ -227,10 +232,10 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
             initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
             className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6"
           >
-            Protección total. <br/> Crédito ilimitado.
+            Protección total. <br/> Crédito flexible.
           </motion.h1>
           <p className="text-xl text-neutral-500 max-w-2xl mx-auto font-medium">
-            Al contratar GBA Care+, no solo proteges tus activos. También desbloqueas una línea de crédito exclusiva en GBA Bank.
+            Planes desde $1.00 cada 2 días. Cancela cuando quieras.
           </p>
         </header>
 
@@ -271,10 +276,19 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
                 {plan.icon}
               </div>
               <h2 className="text-3xl font-bold mb-2">{plan.name}</h2>
-              <div className="text-sm font-bold bg-neutral-200 px-3 py-1 rounded-full mb-4 flex items-center gap-1">
-                 <CreditCard size={12} /> Crédito: ${plan.creditLimit.toLocaleString()}
+              
+              <div className="flex flex-col items-center gap-2 mb-6">
+                 <span className="text-4xl font-extrabold text-blue-600">${plan.price.toFixed(2)}</span>
+                 <span className="text-sm font-medium text-neutral-400 uppercase tracking-widest">{plan.period}</span>
               </div>
+
+              <div className="text-sm font-bold bg-neutral-100 border border-neutral-200 px-4 py-2 rounded-full mb-6 flex items-center gap-2">
+                 <CreditCard size={14} className="text-neutral-500" /> 
+                 <span>Crédito: ${plan.creditLimit.toLocaleString()}</span>
+              </div>
+
               <p className="text-neutral-500 mb-6 text-sm px-4 leading-relaxed">{plan.tagline}</p>
+              
               <span className="mt-auto font-bold text-blue-600 flex items-center gap-1 group-hover:gap-3 transition-all">
                 {currentUser.care_level === plan.name ? 'Plan Actual' : 'Seleccionar'} <ChevronRight size={18} />
               </span>
@@ -286,7 +300,7 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
            <div className="flex-1">
               <h2 className="text-4xl font-bold mb-6 italic tracking-tight">Financia <br/> tus ambiciones.</h2>
               <p className="text-neutral-400 text-lg mb-8 leading-relaxed font-light">
-                Con Care+, obtienes acceso inmediato a una tarjeta de crédito GBA Black, Gold o Silver. Compra ahora y paga después.
+                Con Care+, obtienes acceso inmediato a una tarjeta de crédito GBA. Compra suministros hoy y paga cuando generes ingresos.
               </p>
               <div className="flex gap-4">
                  <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/5"><CreditCard className="text-purple-400" size={20} /></div>
@@ -320,7 +334,9 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
             >
               <div className="mb-6 flex justify-center">{selectedPlan.icon}</div>
               <h3 className="text-4xl font-extrabold mb-2 tracking-tight">Confirmar {selectedPlan.name}</h3>
-              <p className="text-neutral-500 mb-8 font-mono text-sm tracking-widest uppercase font-bold">Total a debitar: ${selectedPlan.price.toLocaleString()}</p>
+              <p className="text-neutral-500 mb-8 font-mono text-sm tracking-widest uppercase font-bold">
+                Cobro inicial: ${selectedPlan.price.toFixed(2)}
+              </p>
               
               <ul className="text-left bg-neutral-50 rounded-2xl p-6 mb-8 space-y-4">
                 {selectedPlan.features.map((f, i) => (
@@ -408,7 +424,7 @@ const GBACare = ({ currentUser, onClose, onUpdate }) => {
                    <h3 className="text-2xl font-bold">Cancelar Suscripción</h3>
                 </div>
                 <p className="text-neutral-600 mb-6 leading-relaxed">
-                   Al cancelar, perderás la cobertura de seguro inmediatamente y <strong>tu tarjeta de crédito será desactivada</strong>. La deuda pendiente deberá ser pagada con tu saldo de débito.
+                   Al cancelar, perderás la cobertura de seguro inmediatamente y <strong>tu tarjeta de crédito será desactivada</strong>.
                 </p>
 
                 <label className="block text-sm font-bold text-neutral-800 mb-2">¿Por qué deseas cancelar?</label>

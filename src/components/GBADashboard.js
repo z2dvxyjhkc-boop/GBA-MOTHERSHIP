@@ -489,12 +489,12 @@ const GBADashboard = ({ user, onLogout }) => {
       )}
 
       {showPOS && (
-  <GBAMerchantPOS
-    currentUser={user} // <--- ¡ESTO ES VITAL! Pasamos tus datos al POS
-    onClose={() => setShowPOS(false)}
-    onSuccess={() => fetchSaldo()}
-  />
-)}
+        <GBAMerchantPOS
+          currentUser={user} // <--- ¡ESTO ES VITAL! Pasamos tus datos al POS
+          onClose={() => setShowPOS(false)}
+          onSuccess={() => fetchSaldo()}
+        />
+      )}
 
       {showSupervisorAuth && (
         <GBASupervisorAuth
